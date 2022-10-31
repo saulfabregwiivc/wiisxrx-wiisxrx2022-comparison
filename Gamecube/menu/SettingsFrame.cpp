@@ -31,6 +31,9 @@
 #include "../wiiSXconfig.h"
 #include "../../psxcommon.h"
 
+#ifdef SHOW_DEBUG
+#include "../DEBUG.h"
+#endif // SHOW_DEBUG
 extern "C" {
 #include "../gc_input/controller.h"
 #include "../fileBrowser/fileBrowser.h"
@@ -55,6 +58,8 @@ void Func_BiosSelectDVD();
 void Func_BootBiosYes();
 void Func_BootBiosNo();
 void Func_ExecuteBios();
+void Func_SelectLanguageEn();
+void Func_SelectLanguageChs();
 void Func_SaveSettingsSD();
 void Func_SaveSettingsUSB();
 
@@ -118,11 +123,11 @@ void pauseAudio(void);  void pauseInput(void);
 void resumeAudio(void); void resumeInput(void);
 }
 
-#define NUM_FRAME_BUTTONS 54
+#define NUM_FRAME_BUTTONS 59
 #define NUM_TAB_BUTTONS 5
 #define FRAME_BUTTONS settingsFrameButtons
 #define FRAME_STRINGS settingsFrameStrings
-#define NUM_FRAME_TEXTBOXES 21
+#define NUM_FRAME_TEXTBOXES 22
 #define FRAME_TEXTBOXES settingsFrameTextBoxes
 
 /*
@@ -160,7 +165,7 @@ Auto Save Memcards: Yes; No
 Save States Device: SD; USB
 */
 
-static char FRAME_STRINGS[56][24] =
+static char FRAME_STRINGS[59][24] =
 	{ "General",
 	  "Video",
 	  "Input",
@@ -193,7 +198,7 @@ static char FRAME_STRINGS[56][24] =
 	  "4:3",
 	  "16:9",
 	  "Force 16:9",
-	  "None",
+	  "NoneNone",
 	  "2xSaI",
 	  "Default",
 	  "Always",
@@ -221,7 +226,12 @@ static char FRAME_STRINGS[56][24] =
 	  "Auto Save Memcards",
 	  "Save States Device",
 	  "CardA",
-	  "CardB"};
+	  "CardB",
+      // Strings for display language (starting at FRAME_STRINGS[56]) ..was[58]
+      "Select language",
+      "En", // English
+      "Chs" //Simplified Chinese
+      };
 
 
 struct ButtonInfo
@@ -254,11 +264,12 @@ struct ButtonInfo
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[13],	375.0,	170.0,	 55.0,	56.0,	 5,	12,	 7,	 9,	Func_BiosSelectSD,		Func_ReturnFromSettingsFrame }, // Bios: SD
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[14],	440.0,	170.0,	 70.0,	56.0,	 6,	12,	 8,	10,	Func_BiosSelectUSB,		Func_ReturnFromSettingsFrame }, // Bios: USB
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[15],	520.0,	170.0,	 70.0,	56.0,	 6,	12,	 9,	 7,	Func_BiosSelectDVD,		Func_ReturnFromSettingsFrame }, // Bios: DVD
-	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[16],	295.0,	240.0,	 75.0,	56.0,	 7,	13,	12,	12,	Func_BootBiosYes,		Func_ReturnFromSettingsFrame }, // Boot Thru Bios: Yes
-	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[17],	380.0,	240.0,	 75.0,	56.0,	 8,	13,	11,	11,	Func_BootBiosNo,		Func_ReturnFromSettingsFrame }, // Boot Thru Bios: No
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[8],	295.0,	310.0,	200.0,	56.0,	11,	14,	-1,	-1,	Func_ExecuteBios,		Func_ReturnFromSettingsFrame }, // Execute Bios
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[13],	295.0,	380.0,	 55.0,	56.0,	13,	 0,	15,	15,	Func_SaveSettingsSD,	Func_ReturnFromSettingsFrame }, // Save Settings: SD
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[14],	360.0,	380.0,	 70.0,	56.0,	13,	 0,	14,	14,	Func_SaveSettingsUSB,	Func_ReturnFromSettingsFrame }, // Save Settings: USB
+	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[16],	295.0,	240.0,	 75.0,	56.0,	 7,	54,	13,	12,	Func_BootBiosYes,		Func_ReturnFromSettingsFrame }, // Boot Thru Bios: Yes
+	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[17],	380.0,	240.0,	 75.0,	56.0,	 8,	55,	11,	13,	Func_BootBiosNo,		Func_ReturnFromSettingsFrame }, // Boot Thru Bios: No
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[8],	465.0,	240.0,	180.0,	56.0,	9,	54,	12,	11,	Func_ExecuteBios,		Func_ReturnFromSettingsFrame }, // Execute Bios
+
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[13],	295.0,	380.0,	 55.0,	56.0,	54,	 0,	15,	15,	Func_SaveSettingsSD,	Func_ReturnFromSettingsFrame }, // Save Settings: SD
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[14],	360.0,	380.0,	 70.0,	56.0,	55,	 0,	14,	14,	Func_SaveSettingsUSB,	Func_ReturnFromSettingsFrame }, // Save Settings: USB
 	//Buttons for Video Tab (starts at button[16])
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[24],	325.0,	100.0,	 75.0,	56.0,	 1,	18,	17,	17,	Func_ShowFpsOn,			Func_ReturnFromSettingsFrame }, // Show FPS: On
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[25],	420.0,	100.0,	 75.0,	56.0,	 1,	19,	16,	16,	Func_ShowFpsOff,		Func_ReturnFromSettingsFrame }, // Show FPS: Off
@@ -301,6 +312,8 @@ struct ButtonInfo
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[17],	380.0,	170.0,	 75.0,	56.0,	47,	53,	50,	50,	Func_AutoSaveNo,		Func_ReturnFromSettingsFrame }, // Auto Save Memcards: No
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[13],	295.0,	240.0,	 55.0,	56.0,	50,	 4,	53,	53,	Func_SaveStateSD,		Func_ReturnFromSettingsFrame }, // Save State: SD
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[14],	360.0,	240.0,	 70.0,	56.0,	51,	 4,	52,	52,	Func_SaveStateUSB,		Func_ReturnFromSettingsFrame }, // Save State: USB
+	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[57],	295.0,	310.0,	 75.0,	56.0,	 11,14,	55,	55,	Func_SelectLanguageEn,	Func_ReturnFromSettingsFrame }, // Select Language: En
+	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[58],	380.0,	310.0,	 75.0,	56.0,	 12,15,	54,	54,	Func_SelectLanguageChs,	Func_ReturnFromSettingsFrame }, // Select Language: Chs
 };
 
 struct TextBoxInfo
@@ -330,23 +343,24 @@ struct TextBoxInfo
 	{	NULL,	FRAME_STRINGS[37],	145.0,	268.0,	 1.0,	true }, // Disable Rumble: Yes/No
 	{	NULL,	FRAME_STRINGS[40],	145.0,	338.0,	 1.0,	true }, // Save Button Configs: SD/USB
 	{	NULL,	FRAME_STRINGS[41],	145.0,	408.0,	 1.0,	true }, // Auto Load Slot: Default/1/2/3/4
-	//TextBoxes for Audio Tab (starts at textBox[14]) ..was[12]
+	//TextBoxes for Audio Tab (starts at textBox[14]) ..was[17]
 	{	NULL,	FRAME_STRINGS[43],	210.0,	128.0,	 1.0,	true }, // Disable Audio: Yes/No
 	{	NULL,	FRAME_STRINGS[44],	210.0,	198.0,	 1.0,	true }, // Disable XA Audio: Yes/No
 	{	NULL,	FRAME_STRINGS[45],	210.0,	268.0,	 1.0,	true }, // Disable CDDA Audio: Yes/No
 	{	NULL,	FRAME_STRINGS[46],	210.0,	338.0,	 1.0,	true }, // Volume: low/medium/loud/loudest
-	//TextBoxes for Saves Tab (starts at textBox[18]) ..was[16]
+	//TextBoxes for Saves Tab (starts at textBox[18]) ..was[21]
 	{	NULL,	FRAME_STRINGS[51],	150.0,	128.0,	 1.0,	true }, // Memcard Save Device: SD/USB/CardA/CardB
 	{	NULL,	FRAME_STRINGS[52],	150.0,	198.0,	 1.0,	true }, // Auto Save Memcards: Yes/No
 	{	NULL,	FRAME_STRINGS[53],	150.0,	268.0,	 1.0,	true }, // Save State Device: SD/USB
+	{	NULL,	FRAME_STRINGS[56],	155.0,	338.0,	 1.0,	true }, // Select language: En, Chs, ......
 };
 
 SettingsFrame::SettingsFrame()
 		: activeSubmenu(SUBMENU_GENERAL)
 {
 	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
-		FRAME_BUTTONS[i].button = new menu::Button(FRAME_BUTTONS[i].buttonStyle, &FRAME_BUTTONS[i].buttonString, 
-										FRAME_BUTTONS[i].x, FRAME_BUTTONS[i].y, 
+		FRAME_BUTTONS[i].button = new menu::Button(FRAME_BUTTONS[i].buttonStyle, &FRAME_BUTTONS[i].buttonString,
+										FRAME_BUTTONS[i].x, FRAME_BUTTONS[i].y,
 										FRAME_BUTTONS[i].width, FRAME_BUTTONS[i].height);
 
 	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
@@ -359,15 +373,15 @@ SettingsFrame::SettingsFrame()
 		if (FRAME_BUTTONS[i].clickedFunc) FRAME_BUTTONS[i].button->setClicked(FRAME_BUTTONS[i].clickedFunc);
 		if (FRAME_BUTTONS[i].returnFunc) FRAME_BUTTONS[i].button->setReturn(FRAME_BUTTONS[i].returnFunc);
 		add(FRAME_BUTTONS[i].button);
-		menu::Cursor::getInstance().addComponent(this, FRAME_BUTTONS[i].button, FRAME_BUTTONS[i].x, 
-												FRAME_BUTTONS[i].x+FRAME_BUTTONS[i].width, FRAME_BUTTONS[i].y, 
+		menu::Cursor::getInstance().addComponent(this, FRAME_BUTTONS[i].button, FRAME_BUTTONS[i].x,
+												FRAME_BUTTONS[i].x+FRAME_BUTTONS[i].width, FRAME_BUTTONS[i].y,
 												FRAME_BUTTONS[i].y+FRAME_BUTTONS[i].height);
 	}
 
 	for (int i = 0; i < NUM_FRAME_TEXTBOXES; i++)
 	{
-		FRAME_TEXTBOXES[i].textBox = new menu::TextBox(&FRAME_TEXTBOXES[i].textBoxString, 
-										FRAME_TEXTBOXES[i].x, FRAME_TEXTBOXES[i].y, 
+		FRAME_TEXTBOXES[i].textBox = new menu::TextBox(&FRAME_TEXTBOXES[i].textBoxString,
+										FRAME_TEXTBOXES[i].x, FRAME_TEXTBOXES[i].y,
 										FRAME_TEXTBOXES[i].scale, FRAME_TEXTBOXES[i].centered);
 		add(FRAME_TEXTBOXES[i].textBox);
 	}
@@ -418,6 +432,8 @@ void SettingsFrame::activateSubmenu(int submenu)
 			}
 			for (int i = 0; i < 4; i++)
 				FRAME_TEXTBOXES[i].textBox->setVisible(true);
+
+            FRAME_TEXTBOXES[21].textBox->setVisible(true);
 			FRAME_BUTTONS[0].button->setSelected(true);
 			if (dynacore == DYNACORE_INTERPRETER)	FRAME_BUTTONS[5].button->setSelected(true);
 			else									FRAME_BUTTONS[6].button->setSelected(true);
@@ -429,6 +445,20 @@ void SettingsFrame::activateSubmenu(int submenu)
 				FRAME_BUTTONS[i].button->setVisible(true);
 				FRAME_BUTTONS[i].button->setActive(true);
 			}
+			FRAME_BUTTONS[54].button->setVisible(true);
+            FRAME_BUTTONS[54].button->setActive(true);
+            FRAME_BUTTONS[55].button->setVisible(true);
+            FRAME_BUTTONS[55].button->setActive(true);
+            switch(lang)
+            {
+                case SIMP_CHINESE:
+                    FRAME_BUTTONS[55].button->setSelected(true);
+                    break;
+
+                default:
+                    FRAME_BUTTONS[54].button->setSelected(true);
+                    break;
+            }
 			break;
 		case SUBMENU_VIDEO:
 			setDefaultFocus(FRAME_BUTTONS[1].button);
@@ -503,10 +533,12 @@ void SettingsFrame::activateSubmenu(int submenu)
 				FRAME_BUTTONS[i].button->setVisible(true);
 				FRAME_BUTTONS[i].button->setActive(true);
 			}
-			for (int i = 43; i <= 44; i++)	//disable CDDA buttons
+			// upd xjsxjs197 start
+			/*for (int i = 43; i <= 44; i++)	//disable CDDA buttons
 			{
 				FRAME_BUTTONS[i].button->setActive(false);
-			}
+			}*/
+			// upd xjsxjs197 end
 			break;
 		case SUBMENU_SAVES:
 			setDefaultFocus(FRAME_BUTTONS[4].button);
@@ -527,6 +559,10 @@ void SettingsFrame::activateSubmenu(int submenu)
 			else										FRAME_BUTTONS[53].button->setSelected(true);
 			for (int i = 46; i < NUM_FRAME_BUTTONS; i++)
 			{
+			    if (i == 54 || i == 55) {
+                    // language info
+                    continue;
+			    }
 				FRAME_BUTTONS[i].button->setVisible(true);
 				FRAME_BUTTONS[i].button->setActive(true);
 			}
@@ -551,7 +587,7 @@ void SettingsFrame::drawChildren(menu::Graphics &gfx)
 				if (currentButtonsDownGC & PAD_TRIGGER_R)
 				{
 					//move to next tab
-					if(activeSubmenu < SUBMENU_SAVES) 
+					if(activeSubmenu < SUBMENU_SAVES)
 					{
 						activateSubmenu(activeSubmenu+1);
 						menu::Focus::getInstance().clearPrimaryFocus();
@@ -561,7 +597,7 @@ void SettingsFrame::drawChildren(menu::Graphics &gfx)
 				else if (currentButtonsDownGC & PAD_TRIGGER_L)
 				{
 					//move to the previous tab
-					if(activeSubmenu > SUBMENU_GENERAL) 
+					if(activeSubmenu > SUBMENU_GENERAL)
 					{
 						activateSubmenu(activeSubmenu-1);
 						menu::Focus::getInstance().clearPrimaryFocus();
@@ -579,7 +615,7 @@ void SettingsFrame::drawChildren(menu::Graphics &gfx)
 					if (currentButtonsDownWii & WPAD_CLASSIC_BUTTON_FULL_R)
 					{
 						//move to next tab
-						if(activeSubmenu < SUBMENU_SAVES) 
+						if(activeSubmenu < SUBMENU_SAVES)
 						{
 							activateSubmenu(activeSubmenu+1);
 							menu::Focus::getInstance().clearPrimaryFocus();
@@ -589,7 +625,7 @@ void SettingsFrame::drawChildren(menu::Graphics &gfx)
 					else if (currentButtonsDownWii & WPAD_CLASSIC_BUTTON_FULL_L)
 					{
 						//move to the previous tab
-						if(activeSubmenu > SUBMENU_GENERAL) 
+						if(activeSubmenu > SUBMENU_GENERAL)
 						{
 							activateSubmenu(activeSubmenu-1);
 							menu::Focus::getInstance().clearPrimaryFocus();
@@ -602,7 +638,7 @@ void SettingsFrame::drawChildren(menu::Graphics &gfx)
 					if (currentButtonsDownWii & WPAD_BUTTON_PLUS)
 					{
 						//move to next tab
-						if(activeSubmenu < SUBMENU_SAVES) 
+						if(activeSubmenu < SUBMENU_SAVES)
 						{
 							activateSubmenu(activeSubmenu+1);
 							menu::Focus::getInstance().clearPrimaryFocus();
@@ -612,7 +648,7 @@ void SettingsFrame::drawChildren(menu::Graphics &gfx)
 					else if (currentButtonsDownWii & WPAD_BUTTON_MINUS)
 					{
 						//move to the previous tab
-						if(activeSubmenu > SUBMENU_GENERAL) 
+						if(activeSubmenu > SUBMENU_GENERAL)
 						{
 							activateSubmenu(activeSubmenu-1);
 							menu::Focus::getInstance().clearPrimaryFocus();
@@ -771,11 +807,11 @@ void Func_BiosSelectHLE()
 	}
 }
 
-int checkBiosExists(int testDevice) 
+int checkBiosExists(int testDevice)
 {
 	fileBrowser_file testFile;
 	memset(&testFile, 0, sizeof(fileBrowser_file));
-	
+
 	biosFile_dir = (testDevice == BIOSDEVICE_SD) ? &biosDir_libfat_Default : &biosDir_libfat_USB;
 	sprintf(&testFile.name[0], "%s/SCPH1001.BIN", &biosFile_dir->name[0]);
 	biosFile_readFile  = fileBrowser_libfat_readFile;
@@ -852,11 +888,11 @@ void Func_BootBiosYes()
 		menu::MessageBox::getInstance().setMessage("You must select a BIOS, not HLE");
 		return;
 	}*/
-	
+
 	for (int i = 11; i <= 12; i++)
 		FRAME_BUTTONS[i].button->setSelected(false);
 	FRAME_BUTTONS[11].button->setSelected(true);
-	
+
 	LoadCdBios = BOOTTHRUBIOS_YES;
 }
 
@@ -898,6 +934,22 @@ void Func_ExecuteBios()
 	continueRemovalThread();
 }
 
+void Func_SelectLanguageEn()
+{
+	for (int i = 54; i <= 55; i++)
+		FRAME_BUTTONS[i].button->setSelected(false);
+	FRAME_BUTTONS[54].button->setSelected(true);
+	lang = ENGLISH;
+}
+
+void Func_SelectLanguageChs()
+{
+	for (int i = 54; i <= 55; i++)
+		FRAME_BUTTONS[i].button->setSelected(false);
+	FRAME_BUTTONS[55].button->setSelected(true);
+	lang = SIMP_CHINESE;
+}
+
 extern void writeConfig(FILE* f);
 
 void Func_SaveSettingsSD()
@@ -916,6 +968,10 @@ void Func_SaveSettingsSD()
 			writeConfig(f);                                   //write out the config
 			fclose(f);
 			menu::MessageBox::getInstance().setMessage("Saved settings.cfg to SD");
+			if (oldLang != lang)
+            {
+                menu::MessageBox::getInstance().setMessage("Because the language has changed, please restart");
+			}
 			return;
 		}
 	}
@@ -938,6 +994,10 @@ void Func_SaveSettingsUSB()
 			writeConfig(f);                                   //write out the config
 			fclose(f);
 			menu::MessageBox::getInstance().setMessage("Saved settings.cfg to USB");
+			if (oldLang != lang)
+            {
+                menu::MessageBox::getInstance().setMessage("Because the language has changed, please restart");
+			}
 			return;
 		}
 	}
@@ -1259,15 +1319,27 @@ void Func_DisableCddaYes()
 		FRAME_BUTTONS[i].button->setSelected(false);
 	FRAME_BUTTONS[43].button->setSelected(true);
 	Config.Cdda = CDDA_DISABLE;
+	#ifdef SHOW_DEBUG
+	canWriteLog = !canWriteLog;
+	sprintf(txtbuffer,"Current Write Log Status %d", canWriteLog);
+	menu::MessageBox::getInstance().setMessage(txtbuffer);
+	DEBUG_print(txtbuffer, DBG_CORE2);
+	#endif // SHOW_DEBUG
 }
 
 void Func_DisableCddaNo()
 {
-/*	for (int i = 43; i <= 44; i++)
+	for (int i = 43; i <= 44; i++)
 		FRAME_BUTTONS[i].button->setSelected(false);
 	FRAME_BUTTONS[44].button->setSelected(true);
-	Config.Cdda = CDDA_ENABLE;*/
-	menu::MessageBox::getInstance().setMessage("CDDA audio is not implemented");
+	Config.Cdda = CDDA_ENABLE;
+	#ifdef SHOW_DEBUG
+	canWriteLog = !canWriteLog;
+	sprintf(txtbuffer,"Current Write Log Status %d", canWriteLog);
+	menu::MessageBox::getInstance().setMessage(txtbuffer);
+	DEBUG_print(txtbuffer, DBG_CORE2);
+	#endif // SHOW_DEBUG
+	//menu::MessageBox::getInstance().setMessage("CDDA audio is not implemented");
 }
 
 extern "C" void SetVolume(void);

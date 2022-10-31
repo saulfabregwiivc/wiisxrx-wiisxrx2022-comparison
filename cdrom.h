@@ -14,11 +14,15 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program; if not, write to the                         *
  *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02111-1307 USA.           *
  ***************************************************************************/
 
 #ifndef __CDROM_H__
 #define __CDROM_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "psxcommon.h"
 #include "decode_xa.h"
@@ -26,6 +30,21 @@
 #include "plugins.h"
 #include "psxmem.h"
 #include "psxhw.h"
+
+//#define btoi(b)     ((b) / 16 * 10 + (b) % 16) /* BCD to u_char */
+//#define btoi(b)		(((b) >> 4) * 10 + ((b) & 15)) /* BCD to u_char */
+#define btoi(b)		(btoiBuf[b]) /* BCD to u_char */
+//#define itob(i)     ((i) / 10 * 16 + (i) % 10) /* u_char to BCD */
+//#define itob(i)		((((i) / 10) << 4) + (i) % 10)  /* u_char to BCD */
+#define itob(i)		(itobBuf[i])  /* u_char to BCD */
+
+//#define MSF2SECT(m, s, f)		(((m) * 60 + (s) - 2) * 75 + (f))
+#define MSF2SECT(m, s, f)		(msf2SectM[(m)] + msf2SectS[(s)] - 150 + (f))
+
+#define CD_FRAMESIZE_RAW		2352
+#define DATA_SIZE				(CD_FRAMESIZE_RAW - 12)
+
+#define SUB_FRAMESIZE			96
 
 typedef struct {
 	unsigned char OCUP;
@@ -37,8 +56,19 @@ typedef struct {
 
 	unsigned char StatP;
 
-	unsigned char Transfer[2352];
+	unsigned char Transfer[DATA_SIZE];
 	unsigned char *pTransfer;
+	unsigned int  transferIndex;
+    struct {
+		unsigned char Track;
+		unsigned char Index;
+		unsigned char Relative[3];
+		unsigned char Absolute[3];
+	} subq;
+	unsigned char TrackChanged;
+	bool m_locationChanged;
+	unsigned char pad1[2];
+	unsigned int  freeze_ver;
 
 	unsigned char Prev[4];
 	unsigned char Param[8];
@@ -51,10 +81,12 @@ typedef struct {
 	unsigned char ResultReady;
 	unsigned char Cmd;
 	unsigned char Readed;
+	unsigned char SetlocPending;
 	unsigned long Reading;
 
 	unsigned char ResultTN[6];
 	unsigned char ResultTD[4];
+	unsigned char SetSectorEnd[4];
 	unsigned char SetSector[4];
 	unsigned char SetSectorSeek[4];
 	unsigned char Track;
@@ -70,18 +102,30 @@ typedef struct {
 	int Init;
 
 	unsigned char Irq;
+	unsigned char IrqRepeated;
 	unsigned long eCycle;
 
 	int Seeked;
 
+	u8 DriveState;
+	u8 FastForward;
 	char Unused[4083];
 } cdrStruct;
 
 cdrStruct cdr;
+extern unsigned char btoiBuf[];
+extern unsigned char itobBuf[];
+extern int msf2SectM[];
+extern int msf2SectS[];
 
 void cdrReset();
 void cdrInterrupt();
 void cdrReadInterrupt();
+void cdrRepplayInterrupt();
+void cdrLidSeekInterrupt();
+void cdrPlayInterrupt();
+void cdrDmaInterrupt();
+void LidInterrupt();
 unsigned char cdrRead0(void);
 unsigned char cdrRead1(void);
 unsigned char cdrRead2(void);
@@ -92,4 +136,9 @@ void cdrWrite2(unsigned char rt);
 void cdrWrite3(unsigned char rt);
 int cdrFreeze(gzFile f, int Mode);
 
-#endif /* __CDROM_H__ */
+bool swapIso;
+
+#ifdef __cplusplus
+}
+#endif
+#endif

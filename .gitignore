@@ -1,0 +1,8 @@
+
+*.o
+*.d
+Gamecube/*.dol
+Gamecube/*.elf
+Gamecube/build_debug/*.*
+Gamecube/build_release/*.*
+

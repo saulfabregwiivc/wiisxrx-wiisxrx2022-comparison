@@ -42,35 +42,24 @@ public:
 		static IplFont obj;
 		return obj;
 	}
+	~IplFont();
 
 private:
 	IplFont();
-	~IplFont();
-	void initFont();
-	#ifndef WII
-	void setIplConfig(unsigned char c);
-	#endif
-	void decodeYay0(void *src, void *dst);
-	void convertI2toI4(void *dst, void *src, int xres, int yres);
 
-	typedef struct {
-		u16 s[256], t[256], font_size[256], fheight;
-	} CHAR_INFO;
-
-#ifdef HW_RVL
-	unsigned char *fontFont;
-#else //GC
-	unsigned char fontFont[ 0x40000 ] __attribute__((aligned(32)));
-#endif
+    int getPngBufPtr(char *string);
+    wchar_t* charToWideChar(char* strChar);
+    wchar_t* charToWideChar(const char* strChar);
+    u8* getCharPngBuf(const wchar_t wChar);
+    int getCharCode(const wchar_t wChar);
 
 	u16 frameWidth;
-	CHAR_INFO fontChars;
 	GXTexObj fontTexObj;
 	GXRModeObj *vmode;
 	GXColor fontColor;
-
+	wchar_t* blankChar;
 };
 
-} //namespace menu 
+} //namespace menu
 
 #endif

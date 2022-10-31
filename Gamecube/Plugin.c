@@ -89,7 +89,7 @@ void PADhandleKey(int key) {
 			GPU_freeze(2, (GPUFreeze_t *)&StatesC);
 			if (ShowPic) { ShowPic = 0; gpuShowPic(); }
 			break;
-		case XK_F3:			
+		case XK_F3:
 			sprintf (Text, "sstates/%10.10s.%3.3d", CdromLabel, StatesC);
 			ret = LoadState(Text);
 			if (ret == 0)
@@ -175,12 +175,12 @@ int _OpenPlugins() {
 	signal(SIGPIPE, SignalExit);*/
 
 	GPU_clearDynarec(clearDynarec);
-
 	ret = CDR_open();
 	if (ret < 0) { SysPrintf("Error Opening CDR Plugin\n"); return -1; }
 	ret = SPU_open();
 	if (ret < 0) { SysPrintf("Error Opening SPU Plugin\n"); return -1; }
 	SPU_registerCallback(SPUirq);
+	SPU_registerScheduleCb(SPUschedule);
 	ret = GPU_open(&gpuDisp, "PCSX", NULL);
 	if (ret < 0) { SysPrintf("Error Opening GPU Plugin\n"); return -1; }
 	ret = PAD1_open(&gpuDisp);
@@ -252,7 +252,7 @@ int OpenPlugins() {
 		ReleasePlugins();
 		if (LoadPlugins() == -1) return -1;
 	}
-	return ret;	
+	return ret;
 }
 
 void ClosePlugins() {
@@ -282,7 +282,7 @@ void ResetPlugins() {
 	SPU_shutdown();
 	PAD1_shutdown();
 	PAD2_shutdown();
-	if (Config.UseNet) NET_shutdown(); 
+	if (Config.UseNet) NET_shutdown();
 
 	ret = CDR_init();
 	if (ret < 0) { SysPrintf("CDRinit error: %d\n", ret); return; }

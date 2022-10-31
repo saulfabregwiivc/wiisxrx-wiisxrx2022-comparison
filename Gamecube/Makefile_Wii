@@ -21,22 +21,24 @@ GPU = Soft
 # SOURCES is a list of directories containing source code
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
-TARGET		:=	WiiSXRX
-BUILD		:=	build
-SOURCES		:=	. ../cdrmooby28/ ./gc_input/ ./libgui/ ./menu/ ./fileBrowser/ .. ../ppc/ ../Peops$(GPU)GPU/ ../franspu/
+TARGET		:=	WiiSXRX_debug
+BUILD		:=	build_debug
+SOURCES		:=	../lang \
+                . ./gc_input/ ./libgui/ ./menu/ ./fileBrowser/ .. ../ppc/ ../Peops$(GPU)GPU/ \
+				./libgui/gui2 ../dfsound/
 
-DATA		:=	data  
+DATA		:=	data
 
-INCLUDES	:=	
+INCLUDES	:=
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	= -g -flto -Ofast -Wall $(MACHDEP) $(INCLUDE) -D__GAMECUBE__ -DWII -DHW_RVL -D__ppc__ \
-		  -D__GX__ -DEMBEDDED_FONTS \
-		  -DTHREADED_AUDIO -D_GNU_SOURCE #-DRELEASE -DSHOW_DEBUG -DDEBUGON -DPROFILE -DPRINTGECKO
-		  
+CFLAGS	= -flto -Ofast -w $(MACHDEP) $(INCLUDE) -D__GAMECUBE__ -DWII -DHW_RVL -D__ppc__ \
+		  -D__GX__ \
+		  -DTHREADED_AUDIO -D_GNU_SOURCE -DDISP_DEBUG -DSHOW_DEBUG
+
 CXXFLAGS	=	$(CFLAGS)
 
 ASFLAGS := -DHW_RVL
@@ -46,7 +48,7 @@ LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map,-wrap,wiiuse_register
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-laesnd -ldi -liso9660 -lm -lfat -ldb -lwiiuse -lwupc -lwiidrc -lbte -logc -lz -ltinysmb
+LIBS	:=	-ldi -liso9660 -lm -lSDL -lfat -ldb -lwiiuse -lwupc -lwiidrc -lbte -logc -lz -ltinysmb -lwiikeyboard
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -71,6 +73,7 @@ export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 #---------------------------------------------------------------------------------
 # automatically build a list of object files for our project
 #---------------------------------------------------------------------------------
+LANGFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.lang)))
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
@@ -87,6 +90,7 @@ else
 endif
 
 export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
+                    $(LANGFILES:.lang=.lang.o) \
 					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
 					$(sFILES:.s=.o) $(SFILES:.S=.o)
 
@@ -135,7 +139,10 @@ $(OUTPUT).elf: $(OFILES)
 # This rule links in binary data with the .jpg extension
 #---------------------------------------------------------------------------------
 %.jpg.o	:	%.jpg
-#---------------------------------------------------------------------------------
+	@echo $(notdir $<)
+	$(bin2o)
+
+%.lang.o : %.lang
 	@echo $(notdir $<)
 	$(bin2o)
 

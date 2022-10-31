@@ -198,6 +198,21 @@ void InitRemovalThread()
 #endif
 }
 
+// add xjsxjs197 start
+bool isFileOk(const char *fileName) {
+    if (strstr(fileName, ".cue")
+        || strstr(fileName, ".CUE")
+        || strstr(fileName, ".ccd")
+        || strstr(fileName, ".CCD")
+        || strstr(fileName, ".sub")
+        || strstr(fileName, ".SUB")) {
+        return false;
+    }
+
+    return true;
+}
+// add xjsxjs197 end
+
 int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir){
 
   pauseRemovalThread();
@@ -212,11 +227,15 @@ int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir){
 	*dir = malloc( num_entries * sizeof(fileBrowser_file) );
 	// Read each entry of the directory
 	while( (temp = readdir(dp)) && (temp != NULL) ){
+        if (!isFileOk(temp->d_name)) {
+            continue;
+		}
 		// Make sure we have room for this one
 		if(i == num_entries){
 			++num_entries;
 			*dir = realloc( *dir, num_entries * sizeof(fileBrowser_file) );
 		}
+
 		sprintf((*dir)[i].name, "%s/%s", file->name, temp->d_name);
 		(*dir)[i].offset = 0;
 		(*dir)[i].size	 = 0; //TODO

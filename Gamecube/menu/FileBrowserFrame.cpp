@@ -37,8 +37,11 @@ extern "C" {
 #include "../fileBrowser/fileBrowser-DVD.h"
 #include "../fileBrowser/fileBrowser-CARD.h"
 #include "../fileBrowser/fileBrowser-SMB.h"
-extern long Mooby2CDRgetTN(unsigned char *buffer);
+extern long ISOgetTN(unsigned char *buffer);
+extern char debugInfo[256];
 }
+
+extern "C" char * JoinString(char *s1, char *s2);
 
 void Func_PrevPage();
 void Func_NextPage();
@@ -99,8 +102,8 @@ struct ButtonInfo
 FileBrowserFrame::FileBrowserFrame()
 {
 	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
-		FRAME_BUTTONS[i].button = new menu::Button(FRAME_BUTTONS[i].buttonStyle, &FRAME_BUTTONS[i].buttonString, 
-										FRAME_BUTTONS[i].x, FRAME_BUTTONS[i].y, 
+		FRAME_BUTTONS[i].button = new menu::Button(FRAME_BUTTONS[i].buttonStyle, &FRAME_BUTTONS[i].buttonString,
+										FRAME_BUTTONS[i].x, FRAME_BUTTONS[i].y,
 										FRAME_BUTTONS[i].width, FRAME_BUTTONS[i].height);
 
 	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
@@ -113,8 +116,8 @@ FileBrowserFrame::FileBrowserFrame()
 		if (FRAME_BUTTONS[i].clickedFunc) FRAME_BUTTONS[i].button->setClicked(FRAME_BUTTONS[i].clickedFunc);
 		if (FRAME_BUTTONS[i].returnFunc) FRAME_BUTTONS[i].button->setReturn(FRAME_BUTTONS[i].returnFunc);
 		add(FRAME_BUTTONS[i].button);
-		menu::Cursor::getInstance().addComponent(this, FRAME_BUTTONS[i].button, FRAME_BUTTONS[i].x, 
-												FRAME_BUTTONS[i].x+FRAME_BUTTONS[i].width, FRAME_BUTTONS[i].y, 
+		menu::Cursor::getInstance().addComponent(this, FRAME_BUTTONS[i].button, FRAME_BUTTONS[i].x,
+												FRAME_BUTTONS[i].x+FRAME_BUTTONS[i].width, FRAME_BUTTONS[i].y,
 												FRAME_BUTTONS[i].y+FRAME_BUTTONS[i].height);
 	}
 
@@ -318,7 +321,7 @@ void Func_Select9() { fileBrowserFrame_LoadFile((current_page*NUM_FILE_SLOTS) + 
 void Func_Select10() { fileBrowserFrame_LoadFile((current_page*NUM_FILE_SLOTS) + 9); }
 
 
-static char* filenameFromAbsPath(char* absPath)
+char* filenameFromAbsPath(char* absPath)
 {
 	char* filename = absPath;
 	// Here we want to extract from the absolute path
@@ -353,16 +356,16 @@ void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir)
 	// Free the old menu stuff
 //	if(menu_items){  free(menu_items);  menu_items  = NULL; }
 	if(dir_entries){ free(dir_entries); dir_entries = NULL; }
-	
+
 	// Read the directories and return on error
 	num_entries = isoFile_readDir(dir, &dir_entries);
 	if(num_entries <= 0)
-	{ 
-		if(dir_entries) { free(dir_entries); dir_entries = NULL; } 
-		fileBrowserFrame_Error(dir, num_entries); 
+	{
+		if(dir_entries) { free(dir_entries); dir_entries = NULL; }
+		fileBrowserFrame_Error(dir, num_entries);
 		return;
 	}
-	
+
 	// Sort the listing
 	qsort(dir_entries, num_entries, sizeof(fileBrowser_file), dir_comparator);
 
@@ -458,6 +461,23 @@ extern "C" {
 void newCD(fileBrowser_file *file);
 }
 
+// add xjsxjs197 start
+int ChkString(char * str1, char * str2, int len)
+{
+	int tmpIdx = 0;
+	while (str1[tmpIdx] == str2[tmpIdx])
+	{
+		tmpIdx++;
+		if (tmpIdx >= len)
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+}
+// add xjsxjs197 end
+
 void fileBrowserFrame_LoadFile(int i)
 {
 	char feedback_string[256] = "Failed to load ISO";
@@ -484,15 +504,25 @@ void fileBrowserFrame_LoadFile(int i)
 				Autoboot = false;
 				return;
 			}
-			
+
 			strcpy(feedback_string, "Loaded ");
-			strncat(feedback_string, filenameFromAbsPath(dir_entries[i].name), 36-7);
+			strcat(feedback_string, filenameFromAbsPath(dir_entries[i].name));
 
 			char RomInfo[512] = "";
 			char buffer [50];
 			strcat(RomInfo,feedback_string);
 			sprintf(buffer,"\nCD-ROM Label: %s\n",CdromLabel);
 			strcat(RomInfo,buffer);
+			// add xjsxjs197 start
+			Config.RCntFix = 0;
+			if (ChkString(CdromLabel, "SLPS02480", strlen("SLPS02480"))
+                || ChkString(CdromLabel, "SLPS02481", strlen("SLPS02481"))) {
+		        Config.RCntFix = 1;
+		    }
+			if (ChkString(CdromLabel, "Vandal Hearts", strlen("Vandal Hearts"))) {
+		        Config.RCntFix = 1;
+		    }
+			// add xjsxjs197 end
 			sprintf(buffer,"CD-ROM ID: %s\n", CdromId);
 			strcat(RomInfo,buffer);
 			sprintf(buffer,"ISO Size: %u Mb\n",isoFile.size/1024/1024);
@@ -502,11 +532,10 @@ void fileBrowserFrame_LoadFile(int i)
 			sprintf(buffer,"BIOS: %s\n",(Config.HLE==BIOS_USER_DEFINED) ? "USER DEFINED":"HLE");
 			strcat(RomInfo,buffer);
 			unsigned char tracks[2];
-      Mooby2CDRgetTN(&tracks[0]);
-      sprintf(buffer,"Number of tracks %u\n", tracks[1]);
+            ISOgetTN(&tracks[0]);
+            sprintf(buffer,"Number of tracks %u\n", tracks[1]);
 			strcat(RomInfo,buffer);
-    		
-			
+
 			switch (autoSaveLoaded)
 			{
 			case NATIVESAVEDEVICE_NONE:
@@ -562,7 +591,7 @@ void fileBrowserFrame_LoadFile(int i)
 		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 		//if(hasLoadedISO) Func_SetPlayGame();
 		Func_SetPlayGame(); //hasLoadedISO will be set to False if SysInit() fails
-	} 
+	}
 	else if (fileBrowserMode == FileBrowserFrame::FILEBROWSER_SWAPCD) {
 		//TODO: Properly implement this
 		int ret = loadISOSwap( &dir_entries[i] );
